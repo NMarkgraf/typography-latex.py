@@ -76,7 +76,6 @@ else:
 logging.basicConfig(filename='typography_latex.log', level=DEBUGLEVEL)
 
 
-
 """
  Suchmuster (pattern) für die einzelnen Situationen
 
@@ -91,6 +90,11 @@ logging.basicConfig(filename='typography_latex.log', level=DEBUGLEVEL)
 """
 pattern1 = "([\(,\[,<,\{]?\w\.)\ ?(?:[~|\xa0]?)(\D\.[\),\],>]?[:,\,,\.,\!,\?]?[\),\],\},>]?)"
 recomp1 = re.compile(pattern1)
+
+def get_backup_filename(filename):
+    tmp_path = Path(filename)
+    return tmp_path.with_suffix(tmp_path.suffix + ".bak")
+
 
 def process_line(line):
     new_line = line
@@ -122,12 +126,12 @@ def process_line(line):
                     flag = False
                 else:
                     new_line += part
-        print(new_line)
+        # print(new_line)
     return new_line
 
 
 def remove_old_backup_file(filename):
-    old_backup_file = Path(filename+".bak")
+    old_backup_file = get_backup_filename(filename)
     if old_backup_file.is_file():
         os.remove(old_backup_file)
 
@@ -135,26 +139,27 @@ def remove_old_backup_file(filename):
 def move_file_to_new_backup_file(filename):
     cur_file = Path(filename)
     if cur_file.is_file():
-        new_backup_file = Path(filename+".bak")
+        new_backup_file = get_backup_filename(filename)
         os.rename(cur_file, new_backup_file)
 
 
 def process_backup_to_new_file(filename):
     new_file = Path(filename)
-    old_file = Path(filename+".bak")
+    old_file = get_backup_filename(filename)
     with open(new_file, "w") as out_file:
         with open(old_file, "r") as in_file:
             for line in in_file:
                 out_file.write(process_line(line))
 
 
-def process_file(filename):
-    remove_old_backup_file(filename)
+def process_file(filename, force_backup=False):
+    if force_backup:
+        remove_old_backup_file(filename)
     move_file_to_new_backup_file(filename)
     process_backup_to_new_file(filename)
 
 
-def process_file_list(file_list):
+def process_file_list(file_list, force_backup=False):
     for filename in file_list:
         process_file(filename)
 
@@ -164,9 +169,16 @@ def main():
     """
     logging.debug("Start pandoc filter 'typography_latex.py'")
     parser = argparse.ArgumentParser(description='Processes LaTeX-Files to add more style and typography.')
-    parser.add_argument('--dir', help='Show some help')
-    process_file_list(["test.txt"])
+#    parser.add_argument('--dir', help='Show some help', action="store_const", const="dir", defaul=None)
+    parser.add_argument('--force', help="force overwrite backup file", action="store_true", dest="force", default=False)
+    parser.add_argument('--version', action='version', version='%(prog)s release 1.0')
+    parser.add_argument('file', action='append', default=[], help='filename(s)')
+
+    args = parser.parse_args()
+
+    process_file_list(args.file, force_backup=args.force)
     logging.debug("End pandoc filter 'typography_latex.py'")
+
 
 if __name__ == "__main__":
     main()
