@@ -53,6 +53,7 @@
 """
 
 from pathlib import Path
+from _version import __version__
 
 import os as os  # check if file exists.
 import re as re  # re fuer die Regulaeren Ausdruecke
@@ -171,8 +172,8 @@ def main():
     parser = argparse.ArgumentParser(description='Processes LaTeX-Files to add more style and typography.')
 #    parser.add_argument('--dir', help='Show some help', action="store_const", const="dir", defaul=None)
     parser.add_argument('--force', help="force overwrite backup file", action="store_true", dest="force", default=False)
-    parser.add_argument('--version', action='version', version='%(prog)s release 1.0')
-    parser.add_argument('file', action='append', default=[], help='filename(s)')
+    parser.add_argument('--version', action='version', version='%(prog)s release {version}'.format(version=__version__))
+    parser.add_argument('file', help='filename(s)', nargs="+")
 
     args = parser.parse_args()
 
