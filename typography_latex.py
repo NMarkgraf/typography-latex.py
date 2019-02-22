@@ -9,6 +9,7 @@
   Release:
   ========
   1.0.0 - 21.02.2019 (nm) - Initial Commit
+  1.0.1 - 22.02.2019 (nm) - Kleine Erweiterungen.
 
 
   WICHTIG:
@@ -202,6 +203,7 @@ def main():
     """main function.
     """
     logging.debug("Start pandoc filter 'typography_latex.py'")
+
     parser = argparse.ArgumentParser(description='Processes LaTeX-Files to add more style and typography.')
 #    parser.add_argument('--dir', help='Show some help', action="store_const", const="dir", defaul=None)
     parser.add_argument('--undo', help="undo via copy", action="store_true", dest="undo", default="False")
@@ -212,6 +214,7 @@ def main():
     args = parser.parse_args()
 
     process_file_list(args.file, force_backup=args.force, undo=args.undo)
+    
     logging.debug("End pandoc filter 'typography_latex.py'")
 
 
