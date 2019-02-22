@@ -9,6 +9,9 @@
   Release:
   ========
   1.0.0 - 21.02.2019 (nm) - Initial Commit
+  1.0.1 - 22.02.2019 (nm) - Kleine Erweiterungen.
+  1.0.2 - 24.02.2019 (nm) - Jetzt auch mit Dateilisten via "*.txt". Aber 
+                            kleine Unterverzeichnisse!
 
 
   WICHTIG:
@@ -137,6 +140,7 @@ def process_line(line):
 def remove_old_backup_file(filename):
     old_backup_file = get_backup_filename(filename)
     if old_backup_file.is_file():
+        logging.debug("Remove/delete "+str(old_backup_file))
         os.remove(old_backup_file)
 
 
@@ -144,12 +148,14 @@ def move_file_to_new_backup_file(filename):
     cur_file = Path(filename)
     if cur_file.is_file():
         new_backup_file = get_backup_filename(filename)
+        logging.debug("Move "+str(cur_file)+" to "+str(new_backup_file))
         os.rename(cur_file, new_backup_file)
 
 
 def process_backup_to_new_file(filename):
     new_file = Path(filename)
     old_file = get_backup_filename(filename)
+    logging.debug("Process backup file "+str(old_file)+" to new file "+str(new_file))
     with open(new_file, "w") as out_file:
         with open(old_file, "r") as in_file:
             for line in in_file:
@@ -160,7 +166,9 @@ def copy_backup_to_file(filename):
     cur_file = Path(filename)
     backup_file = get_backup_filename(filename)
     if cur_file.is_file():
+        logging.debug("Remove "+str(cur_file))
         os.remove(cur_file)
+    logging.debug("Copy "+str(backup_file)+" to "+str(cur_file))
     shutil.copy2(backup_file, cur_file)
 
 
@@ -168,11 +176,14 @@ def move_backup_to_file(filename):
     cur_file = Path(filename)
     backup_file = get_backup_filename(filename)
     if cur_file.is_file():
+        logging.debug("Remove "+str(cur_file))
         os.remove(cur_file)
+    logging.debug("Rename "+str(backup_file)+" to "+str(cur_file))
     os.rename(backup_file, cur_file)
 
 
 def process_file_undo(filename, force=False):
+    logging.debug("Process undo")
     if force:
         move_backup_to_file(filename)
     else:
@@ -180,6 +191,7 @@ def process_file_undo(filename, force=False):
 
 
 def process_file_normal(filename, force_backup=False):
+    logging.debug("Process normal")
     if force_backup:
         remove_old_backup_file(filename)
     move_file_to_new_backup_file(filename)
@@ -187,13 +199,19 @@ def process_file_normal(filename, force_backup=False):
 
 
 def process_file(filename, force_backup=False, undo=False):
-    if undo:
+    logging.info(
+        "Process file "+str(filename)+"\t force_backup: "+str(force_backup)+"\t undo: "+str(undo)
+    )
+    if undo == True:
         process_file_undo(filename, force_backup)
     else:
         process_file_normal(filename, force_backup)
 
 
 def process_file_list(file_list, force_backup=False, undo=False):
+    logging.debug(
+        "Process file list"+str(file_list)+"\t force_backup: "+str(force_backup)+"\t undo: "+str(undo)
+    )
     for filename in file_list:
         process_file(filename, force_backup, undo)
 
@@ -201,18 +219,29 @@ def process_file_list(file_list, force_backup=False, undo=False):
 def main():
     """main function.
     """
-    logging.debug("Start pandoc filter 'typography_latex.py'")
+    logging.info("Start pandoc filter 'typography_latex.py'")
+
     parser = argparse.ArgumentParser(description='Processes LaTeX-Files to add more style and typography.')
-#    parser.add_argument('--dir', help='Show some help', action="store_const", const="dir", defaul=None)
-    parser.add_argument('--undo', help="undo via copy", action="store_true", dest="undo", default="False")
-    parser.add_argument('--force', help="force overwrite backup file", action="store_true", dest="force", default=False)
-    parser.add_argument('--version', action='version', version='%(prog)s release {version}'.format(version=__version__))
-    parser.add_argument('file', help='filename(s)', nargs="+")
+    parser.add_argument('-u', '--undo', help="undo via copy", action="store_true", dest="undo", default="False")
+    parser.add_argument('-f', '--force', help="force overwrite backup file", action="store_true", dest="force", default=False)
+    parser.add_argument('-v', '--version', action='version', version='%(prog)s release {version}'.format(version=__version__))
+    parser.add_argument('file', help='filename(s)', nargs="+", default=None)
 
     args = parser.parse_args()
 
-    process_file_list(args.file, force_backup=args.force, undo=args.undo)
-    logging.debug("End pandoc filter 'typography_latex.py'")
+    # print([Path(x) for x in args.file if Path(x).is_file()])
+    
+    logging.debug(
+        "force: "+str(args.force)+"\t undo: "+str(args.undo)
+    )
+    
+    process_file_list(
+        [Path(x) for x in args.file if Path(x).is_file()],
+        force_backup=args.force, 
+        undo=args.undo
+    )
+    
+    logging.info("End pandoc filter 'typography_latex.py'")
 
 
 if __name__ == "__main__":
