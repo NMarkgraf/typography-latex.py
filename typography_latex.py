@@ -55,6 +55,9 @@
 from pathlib import Path
 from _version import __version__
 
+
+import shutil
+
 import os as os  # check if file exists.
 import re as re  # re fuer die Regulaeren Ausdruecke
 
@@ -153,16 +156,46 @@ def process_backup_to_new_file(filename):
                 out_file.write(process_line(line))
 
 
-def process_file(filename, force_backup=False):
+def copy_backup_to_file(filename):
+    cur_file = Path(filename)
+    backup_file = get_backup_filename(filename)
+    if cur_file.is_file():
+        os.remove(cur_file)
+    shutil.copy2(backup_file, cur_file)
+
+
+def move_backup_to_file(filename):
+    cur_file = Path(filename)
+    backup_file = get_backup_filename(filename)
+    if cur_file.is_file():
+        os.remove(cur_file)
+    os.rename(backup_file, cur_file)
+
+
+def process_file_undo(filename, force=False):
+    if force:
+        move_backup_to_file(filename)
+    else:
+        copy_backup_to_file(filename)
+
+
+def process_file_normal(filename, force_backup=False):
     if force_backup:
         remove_old_backup_file(filename)
     move_file_to_new_backup_file(filename)
     process_backup_to_new_file(filename)
 
 
-def process_file_list(file_list, force_backup=False):
+def process_file(filename, force_backup=False, undo=False):
+    if undo:
+        process_file_undo(filename, force_backup)
+    else:
+        process_file_normal(filename, force_backup)
+
+
+def process_file_list(file_list, force_backup=False, undo=False):
     for filename in file_list:
-        process_file(filename)
+        process_file(filename, force_backup, undo)
 
 
 def main():
@@ -171,13 +204,14 @@ def main():
     logging.debug("Start pandoc filter 'typography_latex.py'")
     parser = argparse.ArgumentParser(description='Processes LaTeX-Files to add more style and typography.')
 #    parser.add_argument('--dir', help='Show some help', action="store_const", const="dir", defaul=None)
+    parser.add_argument('--undo', help="undo via copy", action="store_true", dest="undo", default="False")
     parser.add_argument('--force', help="force overwrite backup file", action="store_true", dest="force", default=False)
     parser.add_argument('--version', action='version', version='%(prog)s release {version}'.format(version=__version__))
     parser.add_argument('file', help='filename(s)', nargs="+")
 
     args = parser.parse_args()
 
-    process_file_list(args.file, force_backup=args.force)
+    process_file_list(args.file, force_backup=args.force, undo=args.undo)
     logging.debug("End pandoc filter 'typography_latex.py'")
 
 
