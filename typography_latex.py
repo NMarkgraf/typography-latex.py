@@ -14,6 +14,7 @@
                             kleine Unterverzeichnisse!
   1.1.0 - 26.02.2019 (nm) - Jetzt werden vor und nach alleinstehenden "/" ein
                             kleines Leerzeichen eingefügt.
+  1.1.1 - 01.03.2019 (nm) - Bugfix release. -- ENDLICH!
 
 
   WICHTIG:
@@ -100,6 +101,7 @@ logging.basicConfig(filename='typography_latex.log', level=DEBUGLEVEL)
 pattern1 = "([\(,\[,<,\{]?\w\.)\ ?(?:[~|\xa0]?)(\D\.[\),\],>]?[:,\,,\.,\!,\?]?[\),\],\},>]?)"
 recomp1 = re.compile(pattern1)
 
+
 def get_backup_filename(filename):
     tmp_path = Path(filename)
     return tmp_path.with_suffix(tmp_path.suffix + ".bak")
@@ -155,6 +157,7 @@ def process_line(line):
 
 
 def remove_old_backup_file(filename):
+    logging.debug("Process remove_old_backup_file")
     old_backup_file = get_backup_filename(filename)
     if old_backup_file.is_file():
         logging.debug("Remove/delete "+str(old_backup_file))
@@ -162,6 +165,7 @@ def remove_old_backup_file(filename):
 
 
 def move_file_to_new_backup_file(filename):
+    logging.debug("Process move_file_to_new_backup_file")
     cur_file = Path(filename)
     if cur_file.is_file():
         new_backup_file = get_backup_filename(filename)
@@ -170,6 +174,7 @@ def move_file_to_new_backup_file(filename):
 
 
 def process_backup_to_new_file(filename):
+    logging.debug("Process process_backup_to_new_file")
     new_file = Path(filename)
     old_file = get_backup_filename(filename)
     logging.debug("Process backup file "+str(old_file)+" to new file "+str(new_file))
@@ -180,6 +185,7 @@ def process_backup_to_new_file(filename):
 
 
 def copy_backup_to_file(filename):
+    logging.debug("Process copy_backup_to_file")
     cur_file = Path(filename)
     backup_file = get_backup_filename(filename)
     if cur_file.is_file():
@@ -190,6 +196,7 @@ def copy_backup_to_file(filename):
 
 
 def move_backup_to_file(filename):
+    logging.debug("Process move_backup_to_file")
     cur_file = Path(filename)
     backup_file = get_backup_filename(filename)
     if cur_file.is_file():
@@ -200,7 +207,7 @@ def move_backup_to_file(filename):
 
 
 def process_file_undo(filename, force=False):
-    logging.debug("Process undo")
+    logging.debug("Process process_file_undo")
     if force:
         move_backup_to_file(filename)
     else:
@@ -208,7 +215,7 @@ def process_file_undo(filename, force=False):
 
 
 def process_file_normal(filename, force_backup=False):
-    logging.debug("Process normal")
+    logging.debug("Process process_file_normal")
     if force_backup:
         remove_old_backup_file(filename)
     move_file_to_new_backup_file(filename)
@@ -219,7 +226,8 @@ def process_file(filename, force_backup=False, undo=False):
     logging.info(
         "Process file "+str(filename)+"\t force_backup: "+str(force_backup)+"\t undo: "+str(undo)
     )
-    if undo == True:
+    undo_backup = undo
+    if undo:  
         process_file_undo(filename, force_backup)
     else:
         process_file_normal(filename, force_backup)
@@ -239,10 +247,25 @@ def main():
     logging.info("Start pandoc filter 'typography_latex.py'")
 
     parser = argparse.ArgumentParser(description='Processes LaTeX-Files to add more style and typography.')
-    parser.add_argument('-u', '--undo', help="undo via copy", action="store_true", dest="undo", default="False")
-    parser.add_argument('-f', '--force', help="force overwrite backup file", action="store_true", dest="force", default=False)
-    parser.add_argument('-v', '--version', action='version', version='%(prog)s release {version}'.format(version=__version__))
-    parser.add_argument('file', help='filename(s)', nargs="+", default=None)
+
+    parser.add_argument('-u', '--undo',
+                        help="undo via copy",
+                        action="store_true",
+                        dest="undo",
+                        default=False)
+    parser.add_argument('-f', '--force',
+                        help="force overwrite backup file",
+                        action="store_true",
+                        dest="force",
+                        default=False)
+    parser.add_argument('-v', '--version',
+                        help="print version information",
+                        action='version',
+                        version='%(prog)s release {version}'.format(version=__version__))
+    parser.add_argument('file',
+                        help='filename(s)',
+                        nargs="+",
+                        default=None)
 
     args = parser.parse_args()
 
