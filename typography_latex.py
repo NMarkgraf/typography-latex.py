@@ -12,6 +12,8 @@
   1.0.1 - 22.02.2019 (nm) - Kleine Erweiterungen.
   1.0.2 - 24.02.2019 (nm) - Jetzt auch mit Dateilisten via "*.txt". Aber 
                             kleine Unterverzeichnisse!
+  1.1.0 - 26.02.2019 (nm) - Jetzt werden vor und nach alleinstehenden "/" ein
+                            kleines Leerzeichen eingefügt.
 
 
   WICHTIG:
@@ -103,7 +105,7 @@ def get_backup_filename(filename):
     return tmp_path.with_suffix(tmp_path.suffix + ".bak")
 
 
-def process_line(line):
+def process_line_points(line):
     new_line = line
     if recomp1.search(line):
         pat1_split = recomp1.split(line)
@@ -135,6 +137,21 @@ def process_line(line):
                     new_line += part
         # print(new_line)
     return new_line
+
+
+def process_line_slashes(line):
+    new_line = line
+    chunks = line.split(" / ")
+    if len(chunks) > 1:
+        new_line = ""
+        for chunk in chunks:
+            new_line += chunk
+            new_line += "\\thinspace{}/\\thinspace{}"
+    return new_line
+
+
+def process_line(line):
+    return process_line_slashes(process_line_points(line))
 
 
 def remove_old_backup_file(filename):
