@@ -126,7 +126,7 @@ def process_line_points(line):
                 else:
                     if flag:
                         # print("***")
-                        new_line = new_line.rstrip("\\thinspace{}") + " " + part
+                        new_line = new_line.rstrip("\\thinspace{}") + part
                         flag = False
                     else:
                         new_line += part
