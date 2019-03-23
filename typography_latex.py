@@ -18,6 +18,7 @@
   1.2.0 - 08.03.2019 (nm) - Bugfix release. "(z.B." etc. wird nun korrekt behandelt.
                             Codeblöcke werden nun nicht mehr bearbeitet.
   1.3.0 - 09.03.2019 (nm) - mit "-mg" auf "\," statt "\thinspace{}" umschalten.
+  1.4.0 - 23.03.2019 (nm) - R Codeausdrücke "\Sexpr{...}" werden erkannt und nicht behandelt.
                             
 
 
@@ -114,6 +115,10 @@ recomp3 = re.compile(pattern3)
 pattern4 = "\\verb(?P<verbs>.).*?(?P=verbs)"
 recomp4 = re.compile(pattern4)
 
+
+pattern5 = "\\Sexpr{(.*?)}"
+recomp5 = re.compile(pattern5)
+
 thinspace_mg = "\\,"
 thinspace_nm = "\\thinspace{}"
 thinspace = thinspace_nm
@@ -161,6 +166,25 @@ def process_line_points(line):
     return new_line
 
 
+def process_line_sexpr(line): 
+    logging.debug("Process_line_sexpr:"+str(line))
+    pat5_split = recomp5.split(line)
+    newline = ""
+    flag = False
+    for part in pat5_split:
+        if flag:
+            newline += "Sexpr{" 
+            newline += part
+        else:
+            newline += process_line_slashes(process_line_points(part))
+        if flag:
+            newline += "}"
+            flag = False
+        else:
+            flag = True
+    return newline
+
+
 def process_line_slashes(line):
     global thinspace
     new_line = line
@@ -185,6 +209,9 @@ def has_short_verbatim(line):
     return recomp4.search(line)
 
 
+def has_sexpr(line):
+    return recomp5.search(line)
+
 def process_line(line):
     global in_code_block
 
@@ -200,13 +227,10 @@ def process_line(line):
             in_code_block = False
         logging.debug("Simply return line!")
         return line
-            
-    # if has_short_verbatim(line):
-            
 
     logging.debug("process sub functions!")
     
-    return process_line_slashes(process_line_points(line))
+    return process_line_sexpr(line)
 
 
 def remove_old_backup_file(filename):
