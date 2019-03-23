@@ -15,6 +15,10 @@
   1.1.0 - 26.02.2019 (nm) - Jetzt werden vor und nach alleinstehenden "/" ein
                             kleines Leerzeichen eingefügt.
   1.1.1 - 01.03.2019 (nm) - Bugfix release. -- ENDLICH!
+  1.2.0 - 08.03.2019 (nm) - Bugfix release. "(z.B." etc. wird nun korrekt behandelt.
+                            Codeblöcke werden nun nicht mehr bearbeitet.
+  1.3.0 - 09.03.2019 (nm) - mit "-mg" auf "\," statt "\thinspace{}" umschalten.
+                            
 
 
   WICHTIG:
@@ -101,6 +105,20 @@ logging.basicConfig(filename='typography_latex.log', level=DEBUGLEVEL)
 pattern1 = "([\(,\[,<,\{]?\w\.)\ ?(?:[~|\xa0]?)(\D\.[\),\],>]?[:,\,,\.,\!,\?]?[\),\],\},>]?)"
 recomp1 = re.compile(pattern1)
 
+pattern2 = "^<<.*>>="
+recomp2 = re.compile(pattern2)
+
+pattern3 = "^@"
+recomp3 = re.compile(pattern3)
+
+pattern4 = "\\verb(?P<verbs>.).*?(?P=verbs)"
+recomp4 = re.compile(pattern4)
+
+thinspace_mg = "\\,"
+thinspace_nm = "\\thinspace{}"
+thinspace = thinspace_nm
+
+in_code_block = False
 
 def get_backup_filename(filename):
     tmp_path = Path(filename)
@@ -108,32 +126,34 @@ def get_backup_filename(filename):
 
 
 def process_line_points(line):
+    global thinspace
+    logging.debug("Process_line_points:"+str(line))
     new_line = line
     if recomp1.search(line):
         pat1_split = recomp1.split(line)
-        # print(pat1_split)
+        logging.debug("->slitting:"+str(pat1_split))
         new_line = ""
         flag = False
         for part in pat1_split:
             if len(part) >= 2:
-                if part[1] == ".":
+                if part[1] == "." or (part[0] in ("(", "[", "{") and part[2] == "."):
                     new_line += part
-                    if len(part) == 2:
-                        new_line += "\\thinspace{}"
+                    if len(part) == 2 or (len(part) == 3 and part[0] in ("(", "[", "{")):
+                        new_line += thinspace
                         flag = True
                     else:
                         flag = False
                 else:
                     if flag:
                         # print("***")
-                        new_line = new_line.rstrip("\\thinspace{}") + part
+                        new_line = new_line.rstrip(thinspace) + part
                         flag = False
                     else:
                         new_line += part
             else:
                 if flag:
                     # print("---")
-                    new_line = new_line.rstrip("\\thinspace{}") + " " + part
+                    new_line = new_line.rstrip(thinspace) + " " + part
                     flag = False
                 else:
                     new_line += part
@@ -142,17 +162,50 @@ def process_line_points(line):
 
 
 def process_line_slashes(line):
+    global thinspace
     new_line = line
     chunks = line.split(" / ")
     if len(chunks) > 1:
         new_line = ""
         for chunk in chunks:
             new_line += chunk
-            new_line += "\\thinspace{}/\\thinspace{}"
+            new_line += thinspace+"/"+thinspace
     return new_line
 
 
+def start_code_block(line):
+    return recomp2.search(line)
+
+
+def end_code_block(line):
+    return recomp3.search(line)
+
+
+def has_short_verbatim(line):
+    return recomp4.search(line)
+
+
 def process_line(line):
+    global in_code_block
+
+    logging.debug("Process line with code_block_flag: "+ str(in_code_block) )
+
+    if start_code_block(line):
+        in_code_block = True
+        logging.debug("Start of Codeblock!")
+
+    if in_code_block:
+        if end_code_block(line):
+            logging.debug("End of Codeblock!")
+            in_code_block = False
+        logging.debug("Simply return line!")
+        return line
+            
+    # if has_short_verbatim(line):
+            
+
+    logging.debug("process sub functions!")
+    
     return process_line_slashes(process_line_points(line))
 
 
@@ -244,6 +297,10 @@ def process_file_list(file_list, force_backup=False, undo=False):
 def main():
     """main function.
     """
+    global thinspace
+    global thinspace_nm
+    global thinspace_mg
+    
     logging.info("Start pandoc filter 'typography_latex.py'")
 
     parser = argparse.ArgumentParser(description='Processes LaTeX-Files to add more style and typography.')
@@ -258,6 +315,11 @@ def main():
                         action="store_true",
                         dest="force",
                         default=False)
+    parser.add_argument('-mg', '--mgversion',
+                        help="use \\, instead of \\thinspace{}",
+                        action="store_true",
+                        dest="mgversion",
+                        default=False)
     parser.add_argument('-v', '--version',
                         help="print version information",
                         action='version',
@@ -270,6 +332,11 @@ def main():
     args = parser.parse_args()
 
     # print([Path(x) for x in args.file if Path(x).is_file()])
+    
+    if args.mgversion:
+        thinspace = thinspace_mg  # Mathias Gehrke Version
+    else:
+        thinspace = thinspace_nm  # default aka Norman Markgraf Version
     
     logging.debug(
         "force: "+str(args.force)+"\t undo: "+str(args.undo)
