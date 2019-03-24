@@ -19,6 +19,7 @@
                             Codeblöcke werden nun nicht mehr bearbeitet.
   1.3.0 - 09.03.2019 (nm) - mit "-mg" auf "\," statt "\thinspace{}" umschalten.
   1.4.0 - 23.03.2019 (nm) - R Codeausdrücke "\Sexpr{...}" werden erkannt und nicht behandelt.
+  1.4.1 - 24.03.2019 (nm) - "\verb" ausbrücke werden korrekt behandelt.
                             
 
 
@@ -86,7 +87,7 @@ elif os.path.exists("typography_latex.loglevel.warning"):
 elif os.path.exists("typography_latex.loglevel.error"):
     DEBUGLEVEL = logging.ERROR
 else:
-    DEBUGLEVEL = logging.ERROR  # .ERROR or .DEBUG  or .INFO
+    DEBUGLEVEL = logging.DEBUG  # .ERROR or .DEBUG  or .INFO
 
 logging.basicConfig(filename='typography_latex.log', level=DEBUGLEVEL)
 
@@ -112,9 +113,9 @@ recomp2 = re.compile(pattern2)
 pattern3 = "^@"
 recomp3 = re.compile(pattern3)
 
-pattern4 = "\\verb(?P<verbs>.).*?(?P=verbs)"
+pattern4 = r"\\verb(?P<verbs>\S)(.*?)(?P=verbs)" #"\\verb(?P<verbs>\S)(.*?)(?P=verbs)"
+#pattern4 = "\\verb@(.+?)@"
 recomp4 = re.compile(pattern4)
-
 
 pattern5 = "\\Sexpr{(.*?)}"
 recomp5 = re.compile(pattern5)
@@ -136,7 +137,7 @@ def process_line_points(line):
     new_line = line
     if recomp1.search(line):
         pat1_split = recomp1.split(line)
-        logging.debug("->slitting:"+str(pat1_split))
+        logging.debug("->splitting:"+str(pat1_split))
         new_line = ""
         flag = False
         for part in pat1_split:
@@ -169,6 +170,7 @@ def process_line_points(line):
 def process_line_sexpr(line): 
     logging.debug("Process_line_sexpr:"+str(line))
     pat5_split = recomp5.split(line)
+    logging.debug("->splitting:"+str(pat5_split))
     newline = ""
     flag = False
     for part in pat5_split:
@@ -182,6 +184,31 @@ def process_line_sexpr(line):
             flag = False
         else:
             flag = True
+    return newline
+    
+
+def process_line_verb(line): 
+    logging.debug("Process_line_verb:" + str(line))
+    pat4_split = recomp4.split(line)
+    logging.debug("->splitting:"+str(pat4_split))
+    newline = ""
+    lim = ""
+    count = 0
+    for part in pat4_split:
+        if count == 3:
+            newline += lim
+            count = 0
+        if count == 2:
+            newline += part
+            count = 3
+        if count == 1:
+            newline += "\\verb"
+            lim = part
+            newline += part
+            count = 2
+        if count == 0:
+            newline += process_line_sexpr(part)
+            count = 1
     return newline
 
 
@@ -205,10 +232,6 @@ def end_code_block(line):
     return recomp3.search(line)
 
 
-def has_short_verbatim(line):
-    return recomp4.search(line)
-
-
 def has_sexpr(line):
     return recomp5.search(line)
 
@@ -230,7 +253,7 @@ def process_line(line):
 
     logging.debug("process sub functions!")
     
-    return process_line_sexpr(line)
+    return process_line_verb(line)
 
 
 def remove_old_backup_file(filename):
